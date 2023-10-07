@@ -1,0 +1,7 @@
+{
+  "name": "ws_eng_ccab_dev",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}"
+}
+
