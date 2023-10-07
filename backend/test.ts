@@ -5,8 +5,6 @@ import { strict as assert } from 'assert';
 
 const app = supertest(buildApp());
 
-// const sleep = (delay: number) => new Promise((resolve => setTimeout(resolve, delay)));
-
 async function basicLatencyTest() {
     await app.post("/reset").expect(204);
     const start = performance.now();
@@ -28,7 +26,7 @@ async function concurrencyTest() {
             .send({delay: 1000, charges: 100})
             .expect(200)
             .then(response => {
-                assert(response.body.isAuthorized == true)
+                assert(!response.body.isAuthorized)
             })
     );
 
@@ -39,7 +37,7 @@ async function concurrencyTest() {
             .send({delay: 0, charges: 100})
             .expect(200)
             .then(response => {
-                assert(response.body.isAuthorized == false)
+                assert(response.body.isAuthorized)
             })
     );
 
