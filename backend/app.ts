@@ -3,6 +3,7 @@ import { createClient } from "redis";
 import { json } from "body-parser";
 
 const DEFAULT_BALANCE = 100;
+const MAX_TRIES = 10;
 
 interface ChargeResult {
     isAuthorized: boolean;
@@ -30,14 +31,19 @@ async function reset(account: string): Promise<void> {
 async function charge(account: string, charges: number): Promise<ChargeResult> {
     const client = await connect();
     try {
-        const balance = parseInt((await client.get(`${account}/balance`)) ?? "");
-        if (balance >= charges) {
-            await client.set(`${account}/balance`, balance - charges);
-            const remainingBalance = parseInt((await client.get(`${account}/balance`)) ?? "");
-            return { isAuthorized: true, remainingBalance, charges };
-        } else {
-            return { isAuthorized: false, remainingBalance: balance, charges: 0 };
+        await client.watch(`${account}/balance`);
+        var balance = parseInt((await client.get(`${account}/balance`)) ?? "");
+        for (let i = 0; i < MAX_TRIES; i++) {
+            if (balance < charges) break;
+
+            try {
+                await client.multi().set(`${account}/balance`, balance - charges).exec();
+                return { isAuthorized: true, remainingBalance: balance - charges, charges };
+            } catch {
+                balance = parseInt((await client.get(`${account}/balance`)) ?? "");
+            }
         }
+        return { isAuthorized: false, remainingBalance: balance, charges: 0 };
     } finally {
         await client.disconnect();
     }
