@@ -27,10 +27,11 @@ async function reset(account: string): Promise<void> {
     }
 }
 
-async function charge(account: string, charges: number): Promise<ChargeResult> {
+async function charge(account: string, charges: number, delay: number): Promise<ChargeResult> {
     const client = await connect();
     try {
         const balance = parseInt((await client.get(`${account}/balance`)) ?? "");
+        await sleep(delay);
         if (balance >= charges) {
             await client.set(`${account}/balance`, balance - charges);
             const remainingBalance = parseInt((await client.get(`${account}/balance`)) ?? "");
@@ -42,6 +43,9 @@ async function charge(account: string, charges: number): Promise<ChargeResult> {
         await client.disconnect();
     }
 }
+
+
+export const sleep = (delay: number) => new Promise((resolve => setTimeout(resolve, delay)));
 
 export function buildApp(): express.Application {
     const app = express();
@@ -60,7 +64,8 @@ export function buildApp(): express.Application {
     app.post("/charge", async (req, res) => {
         try {
             const account = req.body.account ?? "account";
-            const result = await charge(account, req.body.charges ?? 10);
+            const delay = req.body.delay ?? 0;
+            const result = await charge(account, req.body.charges ?? 10, delay);
             console.log(`Successfully charged account ${account}`);
             res.status(200).json(result);
         } catch (e) {
